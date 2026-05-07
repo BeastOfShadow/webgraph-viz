@@ -1,0 +1,142 @@
+import { ExternalLink, Lightbulb, X } from 'lucide-react';
+import { useMemo } from 'react';
+
+import { getPageAdvice } from '../lib/advice';
+import { useGraphStore } from '../store';
+import type { GraphNode } from '../types';
+import AdviceList from './AdviceList';
+
+export default function Sidebar() {
+  const node = useGraphStore((s) => s.selectedNode);
+  const nodes = useGraphStore((s) => s.nodes);
+  const edges = useGraphStore((s) => s.edges);
+  const close = () => useGraphStore.getState().selectNode(null);
+  const select = (n: GraphNode) => useGraphStore.getState().selectNode(n);
+
+  const advice = useMemo(
+    () => (node ? getPageAdvice(node, Array.from(nodes.values())) : []),
+    [node, nodes]
+  );
+
+  if (!node) return null;
+
+  const inLinks: GraphNode[] = [];
+  const outLinks: GraphNode[] = [];
+  for (const edge of edges.values()) {
+    if (edge.target === node.id) {
+      const src = nodes.get(edge.source);
+      if (src) inLinks.push(src);
+    } else if (edge.source === node.id) {
+      const tgt = nodes.get(edge.target);
+      if (tgt) outLinks.push(tgt);
+    }
+  }
+
+  return (
+    <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950">
+      <header className="flex items-start justify-between gap-2 border-b border-zinc-800 px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-zinc-100" title={node.title}>
+            {node.title}
+          </h2>
+          <a
+            href={node.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-0.5 flex items-center gap-1 truncate text-xs text-indigo-400 hover:underline"
+          >
+            <span className="truncate">{node.url}</span>
+            <ExternalLink size={12} className="shrink-0" />
+          </a>
+        </div>
+        <button
+          onClick={close}
+          className="text-zinc-500 hover:text-zinc-200"
+          aria-label="Close sidebar"
+        >
+          <X size={18} />
+        </button>
+      </header>
+
+      <div className="grid grid-cols-3 gap-2 border-b border-zinc-800 px-4 py-3 text-center">
+        <Stat label="inbound" value={node.in_degree} accent="text-indigo-400" />
+        <Stat label="outbound" value={node.out_degree} accent="text-violet-400" />
+        <Stat
+          label="pagerank"
+          value={node.pagerank != null ? node.pagerank.toFixed(3) : '—'}
+          accent="text-emerald-400"
+        />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {node.betweenness != null && (
+          <Row label="Betweenness" value={node.betweenness.toFixed(3)} />
+        )}
+        {node.depth != null && <Row label="Depth" value={String(node.depth)} />}
+        {node.status_code != null && <Row label="Status" value={String(node.status_code)} />}
+
+        {advice.length > 0 && (
+          <section className="mt-4">
+            <h3 className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-500">
+              <Lightbulb size={12} /> Tips for this page
+            </h3>
+            <AdviceList items={advice} />
+          </section>
+        )}
+        <LinkList title="Links from" nodes={inLinks} onSelect={select} />
+        <LinkList title="Links to" nodes={outLinks} onSelect={select} />
+      </div>
+    </aside>
+  );
+}
+
+
+function Stat({ label, value, accent }: { label: string; value: number | string; accent: string }) {
+  return (
+    <div>
+      <div className={`text-lg font-semibold ${accent}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-zinc-900 py-1.5 text-xs">
+      <span className="text-zinc-500">{label}</span>
+      <span className="text-zinc-200">{value}</span>
+    </div>
+  );
+}
+
+function LinkList({
+  title,
+  nodes,
+  onSelect,
+}: {
+  title: string;
+  nodes: GraphNode[];
+  onSelect: (n: GraphNode) => void;
+}) {
+  if (nodes.length === 0) return null;
+  return (
+    <section className="mt-4">
+      <h3 className="mb-1 text-[10px] uppercase tracking-wide text-zinc-500">
+        {title} ({nodes.length})
+      </h3>
+      <ul className="space-y-0.5">
+        {nodes.map((n) => (
+          <li key={n.id}>
+            <button
+              onClick={() => onSelect(n)}
+              className="block w-full truncate rounded px-2 py-1 text-left text-xs text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+              title={n.url}
+            >
+              {n.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

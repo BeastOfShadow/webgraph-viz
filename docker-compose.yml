@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    container_name: webgraph-backend
+    environment:
+      WEBGRAPH_HOST: 0.0.0.0
+      WEBGRAPH_PORT: "8000"
+      WEBGRAPH_ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
+    volumes:
+      - ./data:/app/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: webgraph-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    restart: unless-stopped

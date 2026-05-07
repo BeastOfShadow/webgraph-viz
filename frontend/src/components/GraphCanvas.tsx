@@ -1,0 +1,117 @@
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  MarkerType,
+  MiniMap,
+  ReactFlow,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { useCallback, useEffect, useState } from 'react';
+
+import { computePositions } from '../lib/layout';
+import { useGraphStore } from '../store';
+import type { GraphEdge, GraphNode } from '../types';
+import CustomNode from './CustomNode';
+
+const nodeTypes = { page: CustomNode };
+
+export default function GraphCanvas() {
+  const storeNodes = useGraphStore((s) => s.nodes);
+  const storeEdges = useGraphStore((s) => s.edges);
+  const selectedId = useGraphStore((s) => s.selectedNode?.id ?? null);
+  const selectNode = useGraphStore((s) => s.selectNode);
+
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+
+  // Sync store → local state. Preserve positions of nodes we've already placed
+  // so the user's drags survive subsequent store updates.
+  useEffect(() => {
+    setNodes((current) => {
+      const positions = computePositions(Array.from(storeNodes.values()));
+      const existing = new Map(current.map((n) => [n.id, n]));
+      const next: Node[] = [];
+
+      for (const node of storeNodes.values()) {
+        const prior = existing.get(node.id);
+        next.push({
+          id: node.id,
+          type: 'page',
+          position: prior?.position ?? positions.get(node.id) ?? { x: 0, y: 0 },
+          data: node as unknown as Record<string, unknown>,
+          selected: node.id === selectedId,
+        });
+      }
+      return next;
+    });
+  }, [storeNodes, selectedId]);
+
+  useEffect(() => {
+    setEdges((current) => {
+      const existing = new Map(current.map((e) => [e.id, e]));
+      const next: Edge[] = [];
+      for (const edge of storeEdges.values()) {
+        const prior = existing.get(edge.id);
+        next.push(
+          prior ?? buildEdge(edge)
+        );
+      }
+      return next;
+    });
+  }, [storeEdges]);
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, []);
+
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={(_, node) => selectNode(node.data as unknown as GraphNode)}
+      onPaneClick={() => selectNode(null)}
+      fitView
+      fitViewOptions={{ padding: 0.2 }}
+      minZoom={0.1}
+      maxZoom={3}
+      proOptions={{ hideAttribution: true }}
+    >
+      <Background variant={BackgroundVariant.Dots} gap={32} size={1} color="#27272a" />
+      <Controls className="!border-zinc-700 !bg-zinc-900/90" />
+      <MiniMap
+        nodeColor={(n) =>
+          ((n.data as unknown as GraphNode)?.depth === 0 ? '#6366f1' : '#71717a')
+        }
+        maskColor="rgba(0, 0, 0, 0.6)"
+        className="!border-zinc-700 !bg-zinc-900/90"
+        pannable
+        zoomable
+      />
+    </ReactFlow>
+  );
+}
+
+function buildEdge(edge: GraphEdge): Edge {
+  return {
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    type: 'smoothstep',
+    style: { stroke: '#3f3f46', strokeWidth: 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#52525b' },
+  };
+}

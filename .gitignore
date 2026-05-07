@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+dist/
+.vite/
+
+# data
+data/crawls/
+data/sites/
+data/index.json
+
+# editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.log
