@@ -19,8 +19,14 @@ betweenness centrality so you can see which pages the site actually pivots on.
 ## Run with Docker (recommended)
 
 ```bash
-docker compose up --build
+./webgraph.sh up        # build + start (detached)
+./webgraph.sh logs      # tail logs
+./webgraph.sh down      # stop + remove containers
+./webgraph.sh rebuild   # rebuild images without cache
+./webgraph.sh shell backend   # open shell in backend container
 ```
+
+Or directly: `docker compose up --build`
 
 Open <http://localhost:5173>.
 
@@ -97,11 +103,19 @@ webgraph-viz/
 │   ├── vite.config.ts
 │   └── src/
 │       ├── App.tsx
-│       ├── components/    # CrawlForm, GraphCanvas, CustomNode, Sidebar, HistoryDrawer
+│       ├── components/
+│       │   ├── GraphCanvas.tsx    # React Flow canvas
+│       │   ├── CustomNode.tsx     # node renderer
+│       │   ├── CrawlForm.tsx      # URL input + start
+│       │   ├── Sidebar.tsx        # selected-node detail panel
+│       │   ├── RankingsPanel.tsx  # full-height rankings by metric
+│       │   ├── InsightsDrawer.tsx # site-wide SEO/UX advice
+│       │   ├── HistoryDrawer.tsx  # past crawl history
+│       │   └── AdviceList.tsx     # reusable advice cards
 │       ├── hooks/useCrawlSocket.ts
-│       ├── lib/           # api client, layout
-│       ├── store.ts       # Zustand
-│       └── types.ts       # mirror of backend Pydantic
+│       ├── lib/           # api client, layout engine, advice rules
+│       ├── store.ts       # Zustand global state
+│       └── types.ts       # mirrors backend Pydantic models
 ├── data/                  # JSON snapshots (gitignored)
 └── docker-compose.yml
 ```
