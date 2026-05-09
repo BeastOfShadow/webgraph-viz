@@ -151,4 +151,4 @@ Per-domain config falls back when `config` is omitted on POST.
 
 ## License
 
-MIT.
+AGPL-3.0 license.
