@@ -37,6 +37,12 @@ class GraphNode(BaseModel):
     betweenness: float | None = None
     status_code: int | None = None
     depth: int | None = None
+    external_links: int = 0
+    word_count: int | None = None
+    image_count: int | None = None
+    has_meta_description: bool | None = None
+    load_time_ms: int | None = None
+    h1_count: int | None = None
 
 
 class GraphEdge(BaseModel):

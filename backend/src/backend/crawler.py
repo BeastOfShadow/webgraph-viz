@@ -57,6 +57,10 @@ def _ensure_node(state: CrawlState, url: str, **defaults) -> GraphNode:
     if node is None:
         node = GraphNode(id=url, url=url, label=urlparse(url).path or "/", title=url, **defaults)
         state.nodes[url] = node
+    else:
+        for key, val in defaults.items():
+            if getattr(node, key, None) is None:
+                setattr(node, key, val)
     return node
 
 
@@ -108,12 +112,12 @@ async def crawl(
                     state.errors += 1
                     continue
 
-                url, depth, status, html = fetched
+                url, depth, status, html, load_time_ms = fetched
                 if url in state.visited:
                     continue
                 state.visited.add(url)
 
-                node = _ensure_node(state, url, depth=depth, status_code=status)
+                node = _ensure_node(state, url, depth=depth, status_code=status, load_time_ms=load_time_ms)
                 events_to_emit: list[dict] = []
                 if not node.title or node.title == url:
                     pass  # may be updated below
@@ -129,9 +133,17 @@ async def crawl(
                 if title_tag and title_tag.text(strip=True):
                     node.title = title_tag.text(strip=True)
 
+                node.h1_count = len(tree.css("h1"))
+                node.image_count = len(tree.css("img"))
+                node.has_meta_description = tree.css_first('meta[name="description"]') is not None
+                body = tree.css_first("body")
+                if body:
+                    node.word_count = len(body.text(strip=True, separator=" ").split())
+
                 events_to_emit.append({"type": "node_added", "payload": node.model_dump()})
 
                 seen_local: set[str] = set()
+                ext_links = 0
                 for a in tree.css("a[href]"):
                     href = a.attributes.get("href")
                     if not href or href.startswith(("mailto:", "tel:", "javascript:")):
@@ -140,6 +152,7 @@ async def crawl(
                     if target is None:
                         continue
                     if urlparse(target).netloc.replace("www.", "") != origin.replace("www.", ""):
+                        ext_links += 1
                         continue
                     if config.exclude_patterns and _matches_any(target, config.exclude_patterns):
                         continue
@@ -168,6 +181,8 @@ async def crawl(
                     ):
                         queue.append((target, depth + 1))
                         state.queued.add(target)
+
+                node.external_links = ext_links
 
                 for event in events_to_emit:
                     yield await emit(event)
@@ -207,15 +222,17 @@ async def _fetch(
     sem: asyncio.Semaphore,
     url: str,
     depth: int,
-) -> tuple[str, int, int, str | None] | None:
+) -> tuple[str, int, int, str | None, int] | None:
     async with sem:
         try:
+            t0 = time.monotonic()
             response = await client.get(url)
+            load_time_ms = int((time.monotonic() - t0) * 1000)
         except httpx.HTTPError:
             return None
 
         status = response.status_code
         content_type = response.headers.get("content-type", "")
         if "text/html" not in content_type or status >= 400:
-            return (str(response.url), depth, status, None)
-        return (str(response.url), depth, status, response.text)
+            return (str(response.url), depth, status, None, load_time_ms)
+        return (str(response.url), depth, status, response.text, load_time_ms)

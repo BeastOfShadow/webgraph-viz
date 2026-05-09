@@ -9,6 +9,12 @@ export interface GraphNode {
   betweenness?: number | null;
   status_code?: number | null;
   depth?: number | null;
+  external_links?: number | null;
+  word_count?: number | null;
+  image_count?: number | null;
+  has_meta_description?: boolean | null;
+  load_time_ms?: number | null;
+  h1_count?: number | null;
 }
 
 export interface GraphEdge {

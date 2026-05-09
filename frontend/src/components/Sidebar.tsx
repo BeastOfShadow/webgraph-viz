@@ -74,6 +74,32 @@ export default function Sidebar() {
         )}
         {node.depth != null && <Row label="Depth" value={String(node.depth)} />}
         {node.status_code != null && <Row label="Status" value={String(node.status_code)} />}
+        {node.load_time_ms != null && (
+          <Row
+            label="Load time"
+            value={`${node.load_time_ms} ms`}
+            accent={node.load_time_ms > 3000 ? 'text-amber-400' : node.load_time_ms > 1000 ? 'text-yellow-400' : 'text-emerald-400'}
+          />
+        )}
+        {node.word_count != null && <Row label="Words" value={String(node.word_count)} />}
+        {node.h1_count != null && (
+          <Row
+            label="H1 tags"
+            value={String(node.h1_count)}
+            accent={node.h1_count !== 1 ? 'text-amber-400' : undefined}
+          />
+        )}
+        {node.image_count != null && <Row label="Images" value={String(node.image_count)} />}
+        {node.external_links != null && (
+          <Row label="External links" value={String(node.external_links)} />
+        )}
+        {node.has_meta_description != null && (
+          <Row
+            label="Meta description"
+            value={node.has_meta_description ? '✓ present' : '✗ missing'}
+            accent={node.has_meta_description ? 'text-emerald-400' : 'text-amber-400'}
+          />
+        )}
 
         {advice.length > 0 && (
           <section className="mt-4">
@@ -100,11 +126,11 @@ function Stat({ label, value, accent }: { label: string; value: number | string;
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div className="flex items-center justify-between border-b border-zinc-900 py-1.5 text-xs">
       <span className="text-zinc-500">{label}</span>
-      <span className="text-zinc-200">{value}</span>
+      <span className={accent ?? 'text-zinc-200'}>{value}</span>
     </div>
   );
 }

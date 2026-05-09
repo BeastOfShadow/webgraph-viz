@@ -1,4 +1,4 @@
-import { Network } from 'lucide-react';
+import { Download, Network } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import CrawlForm from './components/CrawlForm';
@@ -10,6 +10,7 @@ import RankingsPanel from './components/RankingsPanel';
 import Sidebar from './components/Sidebar';
 import { useCrawlSocket } from './hooks/useCrawlSocket';
 import { api } from './lib/api';
+import { downloadReport } from './lib/report';
 import { useGraphStore } from './store';
 
 export default function App() {
@@ -78,6 +79,7 @@ export default function App() {
             <RankingsDrawer />
             <InsightsDrawer />
             <HistoryDrawer onLoad={loadHistorical} />
+            <ReportButton />
             <a
               href="https://github.com/BeastOfShadow/webgraph-viz"
               target="_blank"
@@ -111,6 +113,31 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function ReportButton() {
+  const nodes = useGraphStore((s) => s.nodes);
+  const edges = useGraphStore((s) => s.edges);
+  const domain = useGraphStore((s) => s.domain);
+
+  if (nodes.size === 0) return null;
+
+  return (
+    <button
+      onClick={() =>
+        downloadReport(
+          domain ?? 'site',
+          Array.from(nodes.values()),
+          Array.from(edges.values()),
+        )
+      }
+      className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 hover:border-zinc-700"
+      title="Download AI-ready report"
+    >
+      <Download size={14} />
+      Report
+    </button>
   );
 }
 

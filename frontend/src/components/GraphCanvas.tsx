@@ -13,7 +13,7 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { computePositions } from '../lib/layout';
 import { useGraphStore } from '../store';
@@ -27,12 +27,40 @@ export default function GraphCanvas() {
   const storeEdges = useGraphStore((s) => s.edges);
   const selectedId = useGraphStore((s) => s.selectedNode?.id ?? null);
   const selectNode = useGraphStore((s) => s.selectNode);
+  const status = useGraphStore((s) => s.status);
+  const crawlId = useGraphStore((s) => s.crawlId);
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
-  // Sync store → local state. Preserve positions of nodes we've already placed
-  // so the user's drags survive subsequent store updates.
+  // Nodes the user manually dragged — their positions survive re-layout
+  const draggedRef = useRef(new Set<string>());
+  // Track whether we already fired the post-crawl re-layout
+  const relayoutFiredRef = useRef(false);
+
+  // Reset on new crawl
+  useEffect(() => {
+    draggedRef.current = new Set();
+    relayoutFiredRef.current = false;
+  }, [crawlId]);
+
+  // Full re-layout when crawl completes (fixes stale ring positions from streaming)
+  useEffect(() => {
+    if (status !== 'done' || relayoutFiredRef.current) return;
+    relayoutFiredRef.current = true;
+
+    setNodes((current) => {
+      const positions = computePositions(Array.from(storeNodes.values()));
+      return current.map((n) => ({
+        ...n,
+        position: draggedRef.current.has(n.id)
+          ? n.position
+          : (positions.get(n.id) ?? n.position),
+      }));
+    });
+  }, [status, storeNodes]);
+
+  // Sync store → local state during crawl (preserve prior positions to avoid jump)
   useEffect(() => {
     setNodes((current) => {
       const positions = computePositions(Array.from(storeNodes.values()));
@@ -58,16 +86,18 @@ export default function GraphCanvas() {
       const existing = new Map(current.map((e) => [e.id, e]));
       const next: Edge[] = [];
       for (const edge of storeEdges.values()) {
-        const prior = existing.get(edge.id);
-        next.push(
-          prior ?? buildEdge(edge)
-        );
+        next.push(existing.get(edge.id) ?? buildEdge(edge));
       }
       return next;
     });
   }, [storeEdges]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
+    for (const change of changes) {
+      if (change.type === 'position' && !change.dragging) {
+        draggedRef.current.add(change.id);
+      }
+    }
     setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
 

@@ -100,6 +100,65 @@ export function getPageAdvice(node: GraphNode, allNodes: GraphNode[]): Advice[] 
     });
   }
 
+  // --- Meta description ----------------------------------------------------
+  if (node.has_meta_description === false) {
+    advice.push({
+      severity: 'warn',
+      title: 'Missing meta description',
+      detail:
+        'No <meta name="description"> found. Search engines use this as the snippet in results. Add a concise 120–160 character summary.',
+    });
+  }
+
+  // --- H1 tags -------------------------------------------------------------
+  if (node.h1_count != null && node.h1_count === 0) {
+    advice.push({
+      severity: 'warn',
+      title: 'No H1 tag',
+      detail: 'Page has no H1 heading. Every page should have exactly one H1 that describes the main topic for crawlers and accessibility.',
+    });
+  } else if (node.h1_count != null && node.h1_count > 1) {
+    advice.push({
+      severity: 'warn',
+      title: `${node.h1_count} H1 tags`,
+      detail: `Multiple H1s dilute heading hierarchy. Consolidate to one main H1; use H2/H3 for subsections.`,
+    });
+  }
+
+  // --- Load time -----------------------------------------------------------
+  if (node.load_time_ms != null && node.load_time_ms > 3000) {
+    advice.push({
+      severity: 'warn',
+      title: `Slow response (${node.load_time_ms} ms)`,
+      detail:
+        'Server took over 3 seconds to respond. This hurts Core Web Vitals and crawl budget. Check server-side rendering, caching, and hosting.',
+    });
+  } else if (node.load_time_ms != null && node.load_time_ms > 1000) {
+    advice.push({
+      severity: 'info',
+      title: `Response time ${node.load_time_ms} ms`,
+      detail: 'Response over 1 second. Aim for under 500 ms for good Core Web Vitals.',
+    });
+  }
+
+  // --- Word count ----------------------------------------------------------
+  if (node.word_count != null && node.word_count < 100 && (node.depth ?? 0) > 0) {
+    advice.push({
+      severity: 'info',
+      title: 'Thin content',
+      detail: `Only ~${node.word_count} words. Pages with very little text may be seen as low-value by search engines. Add more substantive content or merge with a related page.`,
+    });
+  }
+
+  // --- External links ------------------------------------------------------
+  if (node.external_links != null && node.external_links > 30) {
+    advice.push({
+      severity: 'info',
+      title: `${node.external_links} external links`,
+      detail: 'High number of outbound external links. Not inherently bad, but if most are low-quality, consider adding rel="nofollow".',
+    });
+  }
+
   if (advice.length === 0) {
     advice.push({
       severity: 'good',
@@ -121,6 +180,9 @@ export function getSiteAdvice(nodes: GraphNode[]): Advice[] {
   const orphans = nodes.filter((n) => n.in_degree === 0 && (n.depth ?? 0) > 0).length;
   const deadEnds = nodes.filter((n) => n.out_degree === 0).length;
   const deep = nodes.filter((n) => (n.depth ?? 0) >= 4).length;
+  const noMeta = nodes.filter((n) => n.has_meta_description === false).length;
+  const slowPages = nodes.filter((n) => n.load_time_ms != null && n.load_time_ms > 3000).length;
+  const noH1 = nodes.filter((n) => n.h1_count === 0).length;
 
   if (orphans > 0) {
     advice.push({
@@ -141,6 +203,27 @@ export function getSiteAdvice(nodes: GraphNode[]): Advice[] {
       severity: 'info',
       title: `${deep} page${deep > 1 ? 's' : ''} ≥4 clicks deep`,
       detail: 'Deep pages get crawled less often. Promote important ones via the main navigation or topic hubs.',
+    });
+  }
+  if (noMeta > 0) {
+    advice.push({
+      severity: 'warn',
+      title: `${noMeta} page${noMeta > 1 ? 's' : ''} missing meta description`,
+      detail: 'Search engines use meta descriptions as result snippets. Add a 120–160 character summary to each page.',
+    });
+  }
+  if (noH1 > 0) {
+    advice.push({
+      severity: 'warn',
+      title: `${noH1} page${noH1 > 1 ? 's' : ''} without H1`,
+      detail: 'Every page should have exactly one H1 tag describing the main topic.',
+    });
+  }
+  if (slowPages > 0) {
+    advice.push({
+      severity: 'warn',
+      title: `${slowPages} slow page${slowPages > 1 ? 's' : ''} (>3 s)`,
+      detail: 'Server response over 3 seconds hurts Core Web Vitals and crawl budget. Check caching and hosting.',
     });
   }
   if (advice.length === 0) {
