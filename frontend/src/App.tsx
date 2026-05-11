@@ -1,4 +1,4 @@
-import { Download, Network } from 'lucide-react';
+import { Download, Network, GitBranch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import CrawlForm from './components/CrawlForm';
@@ -8,6 +8,7 @@ import InsightsDrawer from './components/InsightsDrawer';
 import RankingsDrawer from './components/RankingsDrawer';
 import RankingsPanel from './components/RankingsPanel';
 import Sidebar from './components/Sidebar';
+import TreeView from './components/TreeView';
 import { useCrawlSocket } from './hooks/useCrawlSocket';
 import { api } from './lib/api';
 import { downloadReport } from './lib/report';
@@ -23,6 +24,8 @@ export default function App() {
   const replaceNodes = useGraphStore((s) => s.replaceNodes);
   const setComplete = useGraphStore((s) => s.setComplete);
   const setHistory = useGraphStore((s) => s.setHistory);
+  const viewMode = useGraphStore((s) => s.viewMode);
+  const setViewMode = useGraphStore((s) => s.setViewMode);
 
   useCrawlSocket(crawlId);
 
@@ -76,6 +79,24 @@ export default function App() {
                 )}
               </div>
             )}
+            {hasGraph && (
+              <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900 p-0.5">
+                <button
+                  onClick={() => setViewMode('graph')}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors ${viewMode === 'graph' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  title="Graph view"
+                >
+                  <Network size={13} />
+                </button>
+                <button
+                  onClick={() => setViewMode('tree')}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors ${viewMode === 'tree' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  title="Tree view"
+                >
+                  <GitBranch size={13} />
+                </button>
+              </div>
+            )}
             <RankingsDrawer />
             <InsightsDrawer />
             <HistoryDrawer onLoad={loadHistorical} />
@@ -104,7 +125,7 @@ export default function App() {
         {hasGraph ? (
           <>
             <div className="flex-1">
-              <GraphCanvas />
+              {viewMode === 'graph' ? <GraphCanvas /> : <TreeView />}
             </div>
             <Sidebar />
           </>

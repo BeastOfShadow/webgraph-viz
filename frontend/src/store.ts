@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { CrawlMeta, CrawlStats, GraphEdge, GraphNode } from './types';
 
 export type CrawlStatus = 'idle' | 'running' | 'done' | 'error';
+export type ViewMode = 'graph' | 'tree';
 
 interface GraphState {
   crawlId: string | null;
@@ -15,6 +16,7 @@ interface GraphState {
   edges: Map<string, GraphEdge>;
   selectedNode: GraphNode | null;
   showRankings: boolean;
+  viewMode: ViewMode;
   stats: CrawlStats;
   history: CrawlMeta[];
 
@@ -26,6 +28,7 @@ interface GraphState {
   setError: (message: string) => void;
   selectNode: (node: GraphNode | null) => void;
   toggleRankings: () => void;
+  setViewMode: (mode: ViewMode) => void;
   setHistory: (history: CrawlMeta[]) => void;
   reset: () => void;
 }
@@ -42,6 +45,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   edges: new Map(),
   selectedNode: null,
   showRankings: false,
+  viewMode: 'graph' as ViewMode,
   stats: emptyStats,
   history: [],
 
@@ -101,6 +105,8 @@ export const useGraphStore = create<GraphState>((set) => ({
   selectNode: (node) => set({ selectedNode: node }),
 
   toggleRankings: () => set((state) => ({ showRankings: !state.showRankings })),
+
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   setHistory: (history) => set({ history }),
 

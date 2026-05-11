@@ -199,6 +199,12 @@ async def crawl(
                     }
                 )
 
+    if not state.visited:
+        raise ValueError(
+            f"Could not fetch {start!r} — no pages were retrieved. "
+            "Check that the URL is reachable from the backend server."
+        )
+
     duration_ms = int((time.monotonic() - started) * 1000)
     yield await emit(
         {
