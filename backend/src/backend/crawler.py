@@ -20,6 +20,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from .models import CrawlConfig, GraphEdge, GraphNode
+from .seo import compute_seo_scores
 
 EventHandler = Callable[[dict], Awaitable[None]]
 
@@ -132,13 +133,41 @@ async def crawl(
                 title_tag = tree.css_first("title")
                 if title_tag and title_tag.text(strip=True):
                     node.title = title_tag.text(strip=True)
+                node.title_length = len(node.title) if node.title and node.title != url else 0
 
-                node.h1_count = len(tree.css("h1"))
-                node.image_count = len(tree.css("img"))
-                node.has_meta_description = tree.css_first('meta[name="description"]') is not None
+                h1_tags = tree.css("h1")
+                node.h1_count = len(h1_tags)
+                if h1_tags:
+                    node.h1_text = h1_tags[0].text(strip=True)[:200] or None
+
+                imgs = tree.css("img")
+                node.image_count = len(imgs)
+                node.images_without_alt = sum(
+                    1 for img in imgs if not (img.attributes.get("alt") or "").strip()
+                )
+
+                meta_desc = tree.css_first('meta[name="description"]')
+                if meta_desc:
+                    node.meta_description_text = (meta_desc.attributes.get("content") or "").strip()
+                    node.has_meta_description = bool(node.meta_description_text)
+                else:
+                    node.has_meta_description = False
+
+                canonical = tree.css_first('link[rel="canonical"]')
+                node.canonical_url = (canonical.attributes.get("href") or "").strip() or None if canonical else None
+
+                robots_meta = tree.css_first('meta[name="robots"]')
+                if robots_meta:
+                    robots_content = (robots_meta.attributes.get("content") or "").lower()
+                    node.robots_noindex = "noindex" in robots_content
+                else:
+                    node.robots_noindex = False
+
                 body = tree.css_first("body")
                 if body:
                     node.word_count = len(body.text(strip=True, separator=" ").split())
+
+                compute_seo_scores(node)
 
                 events_to_emit.append({"type": "node_added", "payload": node.model_dump()})
 

@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import clsx from 'clsx';
 
+import { seoColor } from '../lib/seo';
 import type { GraphNode } from '../types';
 
 type Props = NodeProps & { data: GraphNode };
@@ -13,6 +14,8 @@ export default function CustomNode({ data, selected }: Props) {
     : data.in_degree >= 5
       ? 'border-violet-500/70'
       : 'border-zinc-700';
+
+  const seo = data.seo_score != null ? seoColor(data.seo_score) : null;
 
   return (
     <div
@@ -56,6 +59,24 @@ export default function CustomNode({ data, selected }: Props) {
           </span>
         )}
       </div>
+
+      {seo && (
+        <div className="mt-2 border-t border-zinc-800 pt-2">
+          <div className="mb-1 flex items-center justify-between text-[10px]">
+            <span className="text-zinc-500">SEO</span>
+            <span className={clsx('font-semibold tabular-nums', seo.text)}>
+              {Math.round(data.seo_score!)}
+            </span>
+          </div>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+            <div
+              className={clsx('h-full rounded-full', seo.bg)}
+              style={{ width: `${data.seo_score}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <Handle
         type="source"
         position={Position.Bottom}

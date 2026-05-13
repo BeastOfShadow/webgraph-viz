@@ -43,6 +43,16 @@ class GraphNode(BaseModel):
     has_meta_description: bool | None = None
     load_time_ms: int | None = None
     h1_count: int | None = None
+    # SEO fields
+    canonical_url: str | None = None
+    meta_description_text: str | None = None
+    h1_text: str | None = None
+    images_without_alt: int | None = None
+    title_length: int | None = None
+    robots_noindex: bool | None = None
+    technical_score: float | None = None
+    onpage_score: float | None = None
+    seo_score: float | None = None
 
 
 class GraphEdge(BaseModel):

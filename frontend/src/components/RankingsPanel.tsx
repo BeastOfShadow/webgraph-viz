@@ -1,16 +1,19 @@
+import clsx from 'clsx';
 import { X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { seoColor } from '../lib/seo';
 import { useGraphStore } from '../store';
 import type { GraphNode } from '../types';
 
-type SortKey = 'pagerank' | 'betweenness' | 'in_degree' | 'out_degree';
+type SortKey = 'pagerank' | 'betweenness' | 'in_degree' | 'out_degree' | 'seo_score';
 
 const TABS: { key: SortKey; label: string; accent: string }[] = [
   { key: 'pagerank', label: 'PageRank', accent: 'text-indigo-400' },
   { key: 'betweenness', label: 'Betweenness', accent: 'text-violet-400' },
   { key: 'in_degree', label: 'Inbound', accent: 'text-emerald-400' },
   { key: 'out_degree', label: 'Outbound', accent: 'text-amber-400' },
+  { key: 'seo_score', label: 'SEO', accent: 'text-sky-400' },
 ];
 
 export default function RankingsPanel() {
@@ -44,7 +47,7 @@ export default function RankingsPanel() {
         </button>
       </header>
 
-      <div className="flex gap-1 border-b border-zinc-800 px-3 py-2">
+      <div className="flex flex-wrap gap-1 border-b border-zinc-800 px-3 py-2">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
@@ -105,6 +108,11 @@ function RankRow({
   const ratio = numeric != null && max && max > 0 ? numeric / max : 0;
   const formatted = formatValue(metric, numeric);
 
+  // SEO score gets colored bar
+  const barColor = metric === 'seo_score' && numeric != null
+    ? seoColor(numeric).bg
+    : clsx('bg-current', accent);
+
   return (
     <li>
       <button
@@ -123,12 +131,19 @@ function RankRow({
           </div>
           <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-zinc-800">
             <div
-              className={`h-full rounded-full bg-current ${accent}`}
+              className={clsx('h-full rounded-full', barColor)}
               style={{ width: `${Math.max(2, ratio * 100)}%` }}
             />
           </div>
         </div>
-        <span className={`shrink-0 text-xs tabular-nums ${accent}`}>{formatted}</span>
+        <span
+          className={clsx(
+            'shrink-0 text-xs tabular-nums',
+            metric === 'seo_score' && numeric != null ? seoColor(numeric).text : accent
+          )}
+        >
+          {formatted}
+        </span>
       </button>
     </li>
   );
@@ -137,5 +152,6 @@ function RankRow({
 function formatValue(metric: SortKey, value: number | null): string {
   if (value == null) return '—';
   if (metric === 'pagerank' || metric === 'betweenness') return value.toFixed(3);
+  if (metric === 'seo_score') return String(Math.round(value));
   return String(value);
 }

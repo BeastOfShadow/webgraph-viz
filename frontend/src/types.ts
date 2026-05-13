@@ -15,6 +15,16 @@ export interface GraphNode {
   has_meta_description?: boolean | null;
   load_time_ms?: number | null;
   h1_count?: number | null;
+  // SEO fields
+  canonical_url?: string | null;
+  meta_description_text?: string | null;
+  h1_text?: string | null;
+  images_without_alt?: number | null;
+  title_length?: number | null;
+  robots_noindex?: boolean | null;
+  technical_score?: number | null;
+  onpage_score?: number | null;
+  seo_score?: number | null;
 }
 
 export interface GraphEdge {
